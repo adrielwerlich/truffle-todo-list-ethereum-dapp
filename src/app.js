@@ -1,4 +1,6 @@
-debugger
+
+
+console.log('truffle contract ??', TruffleContract)
 App = {
   loading: false
   , contracts: {}
@@ -12,7 +14,7 @@ App = {
 
   , loadWeb3: async () => {
     // if (typeof web3 !== 'undefined') {
-    //   App.web3Provider = web3.currentProvider
+    //   App.web3provider = web3.currentProvider
     //   web3 = new Web3(web3.currentProvider)
     // } else {
     //   window.alert('Connect to metamask')
@@ -20,11 +22,12 @@ App = {
 
     if (window.ethereum) {
       window.web3 = new Web3(ethereum)
+      App.web3provider = window.ethereum
       try {
         await ethereum.enable()
         // web3.eth.sendTransaction()
       } catch (error) {
-        console.error('user denied account access',error)
+        console.error('user denied account access', error)
       }
     }
     else {
@@ -33,17 +36,18 @@ App = {
   }
 
   , loadAccount: async () => {
-    web3.eth.getAccounts().then(function(accounts) {
+    
+    web3.eth.getAccounts().then(function (accounts) {
       App.account = accounts[0];
-      App.connectedToWeb3();
-  });
+      // App.connectedToWeb3();
+    });
   }
 
   , loadContract: async () => {
     // js version of the contract
     const todoList = await $.getJSON('TodoList.json')
     App.contracts.TodoList = TruffleContract(todoList)
-    App.contracts.TodoList.setProvider(App.web3Provider)
+    App.contracts.TodoList.setProvider(App.web3provider)
 
     // hydrate the smart contract with values from the blockchain
     App.todoList = await App.contracts.TodoList.deployed()
@@ -73,36 +77,52 @@ App = {
     const taskCount = await App.todoList.taskCount()
     const $taskTemplate = $('.taskTemplate')
 
-    for (let index = 0; index < taskCount; index++) {
+    for (let index = 0; index <= taskCount; index++) {
       // fetch from the blockchain
-      const task = await App.todoList.tasks(i)
-      , id = task[0].toNumber()
-      , content = task[1]
-      , isDone = task[2]
+      const task = await App.todoList.tasks(index)
+        , id = task[0].toNumber()
+        , content = task[1] ? task[1] : null
+        , isDone = task[2]
 
-      // html for the task
-      , $newTaskTemplate = $taskTemplate.clone()
-      $newTaskTemplate.find('.content').html(content)
-      $newTaskTemplate.find('input')
-                      .prop('name', id)
-                      .prop('checked', isDone)
+      if (content) {
+        // html for the task
+        const $newTaskTemplate = $taskTemplate.clone()
+        $newTaskTemplate.find('.content').html(content)
+        $newTaskTemplate.find('input')
+          .prop('name', id)
+          .prop('checked', isDone)
+          .on('click', App.toggleCompleted)
 
-      if (isDone) {
-        $('#completedTaskList').append($newTaskTemplate)
-      } else {
-        $('#taskList').append($newTaskTemplate)
+        if (isDone) {
+          $('#completedTaskList').append($newTaskTemplate)
+        } else {
+          $('#taskList').append($newTaskTemplate)
+        }
+
+        // show the task
+        $newTaskTemplate.show()
       }
-
-      // show the task
-      $newTaskTemplate.show()
-      
     }
+  }
+
+  , toggleCompleted: async (e) => {
+    App.setLoading(true)
+    const taskId = e.target.name
+    await App.todoList.toggleCompleted(taskId, { from: App.account })
+    window.location.reload()
+  }
+
+  , createTask: async () => {
+    App.setLoading(true)
+    const content = $('#newTask').val()
+    await App.todoList.createTask(content, { from: App.account })
+    window.location.reload()
   }
 
   , setLoading: (boolean) => {
     App.loading = boolean
     const loader = $('#loader')
-    , content = $('#content')
+      , content = $('#content')
 
     if (boolean) {
       loader.show()

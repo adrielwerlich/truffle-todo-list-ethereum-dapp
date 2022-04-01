@@ -1,22 +1,34 @@
 pragma solidity ^0.5.0;
 
 contract TodoList {
-     uint taskCount = 0;
+    uint256 public taskCount = 0;
 
-     struct Task {
-         uint id;
-         string content;
-         bool completed;
-     }
+    struct Task {
+        uint256 id;
+        string content;
+        bool completed;
+    }
 
-     mapping(uint => Task) public tasks;
+    mapping(uint256 => Task) public tasks;
 
-     constructor() public {
-         createTask("become expert dapp solidity ethereum developer");
-     }
+    event TaskCompleted(uint256 id, bool completed);
+
+    event TaskCreated(uint256 id, string content, bool completed);
+
+    constructor() public {
+        createTask("become expert dapp solidity ethereum developer");
+    }
+
+    function toggleCompleted(uint256 _id) public {
+        Task memory _task = tasks[_id];
+        _task.completed = !_task.completed;
+        tasks[_id] = _task;
+        emit TaskCompleted(_id, _task.completed);
+    }
 
     function createTask(string memory _content) public {
-        taskCount ++;
+        taskCount++;
         tasks[taskCount] = Task(taskCount, _content, false);
+        emit TaskCreated(taskCount, _content, false);
     }
 }
